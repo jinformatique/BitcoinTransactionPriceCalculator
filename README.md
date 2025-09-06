@@ -60,7 +60,7 @@ e95dc5c889149ecfc81af1f079b574278b264b11d67e3920a57accfff11e8b5c
 
 4. **Open your browser:**  
    Visit [http://localhost:5173](http://localhost:5173) (or the port shown in your terminal).
-   If you get a blank screen, try opening a private window on a chromium based browser.
+   If you get a blank screen, try opening a private window or deactivate your adblock extension.
 
 ## 📄 License
 
