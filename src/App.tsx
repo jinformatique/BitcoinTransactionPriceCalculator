@@ -745,7 +745,7 @@ function App() {
 
       {/* Footer */}
       <div className="text-center mt-12 text-gray-500 text-sm">
-        <p>Data provided by <a href="https://mempool.space/" className="hover:text-orange-500">Mempool.space</a>, <a href="https://mobula.io/" className=\"hover:text-orange-500">Mobula</a>, and <a href=\"https://exchangerate-api.com/" className=\"hover:text-orange-500">ExchangeRate-API</a></p>
+        <p>Data provided by <a href="https://mempool.space/" className="hover:text-orange-500">Mempool.space</a>, <a href="https://mobula.io/" className="hover:text-orange-500">Mobula</a>, and <a href="https://exchangerate-api.com/" className="hover:text-orange-500">ExchangeRate-API</a></p>
       </div>
     </div>
   );
