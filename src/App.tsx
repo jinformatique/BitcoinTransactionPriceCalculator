@@ -92,13 +92,10 @@ function App() {
   };
 
   const fetchBitcoinPrice = async (timestamp: number, currency: string): Promise<number> => {
-    const date = new Date(timestamp * 1000);
-    
-    // Try Mobula API first (better rate limits)
+    // Try CryptoCompare first (free, no API key required)
     try {
-      const unixTimestamp = Math.floor(timestamp);
       const response = await fetch(
-        `https://api.mobula.io/api/1/market/history?asset=bitcoin&from=${unixTimestamp}&to=${unixTimestamp}&blockchain=bitcoin`,
+        `https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms=${currency.toUpperCase()}&ts=${timestamp}`,
         {
           headers: {
             'Accept': 'application/json',
@@ -107,31 +104,20 @@ function App() {
       );
       
       if (!response.ok) {
-        throw new Error(`Mobula API failed: ${response.status}`);
+        throw new Error(`CryptoCompare API failed: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      if (data.data?.price_history?.[0]?.price) {
-        const usdPrice = data.data.price_history[0].price;
-        
-        // If currency is USD, return directly
-        if (currency === 'usd') {
-          return usdPrice;
-        }
-        
-        // For other currencies, get current exchange rate and approximate
-        const currentPrice = await fetchCurrentBitcoinPrice(currency);
-        const currentUsdPrice = await fetchCurrentBitcoinPrice('usd');
-        
-        // Calculate historical price using current exchange rate ratio
-        return (usdPrice / currentUsdPrice) * currentPrice;
+      if (data.BTC && data.BTC[currency.toUpperCase()]) {
+        return data.BTC[currency.toUpperCase()];
       }
       
-      throw new Error('No price data in Mobula response');
+      throw new Error('No price data in CryptoCompare response');
     } catch (error) {
-      // Fallback to CoinGecko if Mobula fails
-      console.warn('Mobula API failed, falling back to CoinGecko:', error);
+      console.error('CryptoCompare API failed:', error);
+      
+      // Fallback to CoinGecko (free tier, no API key)
       return await fetchBitcoinPriceFromCoinGecko(timestamp, currency);
     }
   };
@@ -178,11 +164,12 @@ function App() {
     }
   };
 
+
   const fetchCurrentBitcoinPrice = async (currency: string): Promise<number> => {
-    // Try Mobula API first
+    // Try CryptoCompare first (free, no API key required)
     try {
       const response = await fetch(
-        `https://api.mobula.io/api/1/market/data?asset=bitcoin`,
+        `https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=${currency.toUpperCase()}`,
         {
           headers: {
             'Accept': 'application/json',
@@ -191,28 +178,20 @@ function App() {
       );
       
       if (!response.ok) {
-        throw new Error(`Mobula API failed: ${response.status}`);
+        throw new Error(`CryptoCompare API failed: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      if (data.data?.price) {
-        const usdPrice = data.data.price;
-        
-        // If currency is USD, return directly
-        if (currency === 'usd') {
-          return usdPrice;
-        }
-        
-        // For other currencies, we need to get exchange rate from CoinGecko
-        // as Mobula primarily provides USD prices
-        return await fetchCurrentBitcoinPriceFromCoinGecko(currency);
+      if (data[currency.toUpperCase()]) {
+        return data[currency.toUpperCase()];
       }
       
-      throw new Error('No price data in Mobula response');
+      throw new Error('No price data in CryptoCompare response');
     } catch (error) {
+      console.error('CryptoCompare API failed for current price:', error);
+      
       // Fallback to CoinGecko
-      console.warn('Mobula API failed for current price, falling back to CoinGecko:', error);
       return await fetchCurrentBitcoinPriceFromCoinGecko(currency);
     }
   };
@@ -766,7 +745,7 @@ function App() {
 
       {/* Footer */}
       <div className="text-center mt-12 text-gray-500 text-sm">
-        <p>Data provided by Mempool.space, <a href="https://mobula.io/">Mobula</a>, and <a href="https://www.coingecko.com/">CoinGecko APIs</a></p>
+        <p>Data provided by <a href="https://mempool.space/" className="hover:text-orange-500">Mempool.space</a>, <a href="https://mobula.io/" className="hover:text-orange-500">Mobula</a>, and <a href="https://exchangerate-api.com/" className="hover:text-orange-500">ExchangeRate-API</a></p>
       </div>
     </div>
   );
