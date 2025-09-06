@@ -72,9 +72,9 @@ Any help testing, fixing bugs, implementing new features, is of course welcome.
 
 ## 💌 Donation
 
-- Tips accepted via Lightning Network:
-    jinformatique@rizful.com
-    jinformatique@coinos.io
+- Tips accepted via Lightning Network:  
+    jinformatique@rizful.com  
+    jinformatique@coinos.io  
 - Nostr: npub1y7lu0h04p2ls4qjfc4auurdukg2fsrxppspamd53lv0efjmuhrgsklqs2u
 
 
