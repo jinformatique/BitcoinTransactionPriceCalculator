@@ -92,13 +92,10 @@ function App() {
   };
 
   const fetchBitcoinPrice = async (timestamp: number, currency: string): Promise<number> => {
-    const date = new Date(timestamp * 1000);
-    
-    // Use Mobula API for historical prices
+    // Try CryptoCompare first (free, no API key required)
     try {
-      const unixTimestamp = Math.floor(timestamp);
       const response = await fetch(
-        `https://api.mobula.io/api/1/market/history?asset=bitcoin&from=${unixTimestamp}&to=${unixTimestamp}`,
+        `https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms=${currency.toUpperCase()}&ts=${timestamp}`,
         {
           headers: {
             'Accept': 'application/json',
@@ -107,48 +104,63 @@ function App() {
       );
       
       if (!response.ok) {
-        throw new Error(`Mobula API failed: ${response.status} ${response.statusText}`);
+        throw new Error(`CryptoCompare API failed: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      if (data.data?.price_history?.[0]?.price) {
-        const usdPrice = data.data.price_history[0].price;
-        
-        // If currency is USD, return directly
-        if (currency === 'usd') {
-          return usdPrice;
-        }
-        
-        // For other currencies, get current exchange rates from a reliable source
-        const exchangeRateResponse = await fetch(
-          `https://api.exchangerate-api.com/v4/latest/USD`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            }
-          }
-        );
-        
-        if (!exchangeRateResponse.ok) {
-          throw new Error(`Exchange rate API failed: ${exchangeRateResponse.status}`);
-        }
-        
-        const exchangeData = await exchangeRateResponse.json();
-        const exchangeRate = exchangeData.rates[currency.toUpperCase()];
-        
-        if (!exchangeRate) {
-          throw new Error(`Exchange rate not available for ${currency.toUpperCase()}`);
-        }
-        
-        // Convert USD price to target currency using exchange rate
-        return usdPrice * exchangeRate;
+      if (data.BTC && data.BTC[currency.toUpperCase()]) {
+        return data.BTC[currency.toUpperCase()];
       }
       
-      throw new Error('No price data in Mobula response');
+      throw new Error('No price data in CryptoCompare response');
     } catch (error) {
-      console.error('Mobula API failed:', error);
-      throw new Error(`Failed to fetch historical price: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('CryptoCompare API failed:', error);
+      
+      // Fallback to CoinGecko (free tier, no API key)
+      return await fetchBitcoinPriceFromCoinGecko(timestamp, currency);
+    }
+  };
+
+  const fetchBitcoinPriceFromCoinGecko = async (timestamp: number, currency: string): Promise<number> => {
+    const date = new Date(timestamp * 1000);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const dateStr = `${day}-${month}-${year}`; // Format: DD-MM-YYYY
+    
+    try {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${dateStr}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(`CoinGecko API access denied (401). This may be due to rate limiting. Please wait a moment and try again with fewer transactions.`);
+        } else if (response.status === 429) {
+          throw new Error(`CoinGecko rate limit exceeded (429). Please wait a moment before trying again.`);
+        } else {
+          throw new Error(`Failed to fetch price data from CoinGecko: ${response.status} ${response.statusText}`);
+        }
+      }
+      
+      const data: PriceData = await response.json();
+      
+      if (!data.market_data?.current_price?.[currency]) {
+        throw new Error(`Price data not available for ${currency.toUpperCase()} on this date from CoinGecko. Try using USD, EUR, or other major currencies.`);
+      }
+      
+      return data.market_data.current_price[currency];
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch price data from CoinGecko');
     }
   };
 
@@ -195,10 +207,10 @@ function App() {
   };
 
   const fetchCurrentBitcoinPrice = async (currency: string): Promise<number> => {
-    // Use Mobula API for current prices
+    // Try CryptoCompare first (free, no API key required)
     try {
       const response = await fetch(
-        `https://api.mobula.io/api/1/market/data?asset=bitcoin`,
+        `https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=${currency.toUpperCase()}`,
         {
           headers: {
             'Accept': 'application/json',
@@ -207,48 +219,21 @@ function App() {
       );
       
       if (!response.ok) {
-        throw new Error(`Mobula API failed: ${response.status} ${response.statusText}`);
+        throw new Error(`CryptoCompare API failed: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      if (data.data?.price) {
-        const usdPrice = data.data.price;
-        
-        // If currency is USD, return directly
-        if (currency === 'usd') {
-          return usdPrice;
-        }
-        
-        // For other currencies, get current exchange rates
-        const exchangeRateResponse = await fetch(
-          `https://api.exchangerate-api.com/v4/latest/USD`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            }
-          }
-        );
-        
-        if (!exchangeRateResponse.ok) {
-          throw new Error(`Exchange rate API failed: ${exchangeRateResponse.status}`);
-        }
-        
-        const exchangeData = await exchangeRateResponse.json();
-        const exchangeRate = exchangeData.rates[currency.toUpperCase()];
-        
-        if (!exchangeRate) {
-          throw new Error(`Exchange rate not available for ${currency.toUpperCase()}`);
-        }
-        
-        // Convert USD price to target currency
-        return usdPrice * exchangeRate;
+      if (data[currency.toUpperCase()]) {
+        return data[currency.toUpperCase()];
       }
       
-      throw new Error('No price data in Mobula response');
+      throw new Error('No price data in CryptoCompare response');
     } catch (error) {
-      console.error('Mobula API failed for current price:', error);
-      throw new Error(`Failed to fetch current price: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('CryptoCompare API failed for current price:', error);
+      
+      // Fallback to CoinGecko
+      return await fetchCurrentBitcoinPriceFromCoinGecko(currency);
     }
   };
 
@@ -801,7 +786,7 @@ function App() {
 
       {/* Footer */}
       <div className="text-center mt-12 text-gray-500 text-sm">
-        <p>Data provided by <a href="https://mempool.space/" className="hover:text-orange-500">Mempool.space</a>, <a href="https://mobula.io/" className="hover:text-orange-500">Mobula</a>, and <a href="https://exchangerate-api.com/" className="hover:text-orange-500">ExchangeRate-API</a></p>
+        <p>Data provided by <a href="https://mempool.space/" className="hover:text-orange-500">Mempool.space</a>, <a href="https://cryptocompare.com/" className="hover:text-orange-500">CryptoCompare</a>, and <a href="https://coingecko.com/" className="hover:text-orange-500">CoinGecko</a></p>
       </div>
     </div>
   );
