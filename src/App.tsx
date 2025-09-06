@@ -164,47 +164,6 @@ function App() {
     }
   };
 
-  const fetchBitcoinPriceFromCoinGecko = async (timestamp: number, currency: string): Promise<number> => {
-    const date = new Date(timestamp * 1000);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const dateStr = `${day}-${month}-${year}`; // Format: DD-MM-YYYY
-    
-    try {
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${dateStr}`,
-        {
-          headers: {
-            'Accept': 'application/json',
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error(`CoinGecko API access denied (401). This may be due to rate limiting. Please wait a moment and try again with fewer transactions.`);
-        } else if (response.status === 429) {
-          throw new Error(`CoinGecko rate limit exceeded (429). Please wait a moment before trying again.`);
-        } else {
-          throw new Error(`Failed to fetch price data from CoinGecko: ${response.status} ${response.statusText}`);
-        }
-      }
-      
-      const data: PriceData = await response.json();
-      
-      if (!data.market_data?.current_price?.[currency]) {
-        throw new Error(`Price data not available for ${currency.toUpperCase()} on this date from CoinGecko. Try using USD, EUR, or other major currencies.`);
-      }
-      
-      return data.market_data.current_price[currency];
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to fetch price data from CoinGecko');
-    }
-  };
 
   const fetchCurrentBitcoinPrice = async (currency: string): Promise<number> => {
     // Try CryptoCompare first (free, no API key required)
